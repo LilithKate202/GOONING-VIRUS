@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+<title>零遗漏复刻版（黑桃β↔Q碰边）+ 边缘统计</title>
+<style>
+:root{--iframeW:300px;--iframeH:200px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;font-family:Arial;background:linear-gradient(120deg,#ff9a9e 0%,#fad0c4 50%,#fad0c4 100%);animation:bgChange 4s ease-in-out infinite alternate;}
+@keyframes bgChange{0%{background:linear-gradient(120deg,#ff9a9e 0%,#fad0c4 100%);}100%{background:linear-gradient(120deg,#a18cd1 0%,#fbc2eb 100%);}}
+.element{position:absolute;user-select:none;cursor:grab;}
+.iframe-container{position:relative;width:var(--w,var(--iframeW));height:var(--h,var(--iframeH));min-width:160px;min-height:100px;max-width:calc(100vw - 20px);max-height:calc(100vh - 40px);border:1px solid #ccc;box-shadow:0 0 10px rgba(0,0,0,.1);overflow:visible;z-index:1;}
+iframe{width:100%;height:100%;border:0;}
+.slider-bar{position:absolute;bottom:-40px;left:0;display:flex;gap:6px;width:100%;justify-content:space-between;}
+.slider-bar input[type=range]{width:48%;}
+.image-container img{width:calc(var(--w, var(--iframeW)) * 0.5);height:auto;max-width:50vw;max-height:50vh;}
+.text-container p{margin:0;font-size: calc(14 + Math.random()*16)px;color: hsl(Math.random()*360,100%,50%);text-shadow: -1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000;padding:2px 6px;font-weight:bold;}
+.countdown-container{width:150px;height:100px;border:1px solid #ccc;box-shadow:0 0 10px rgba(0,0,0,.1);padding:10px;text-align:center;background:#f9f9f9;z-index:6;}
+.countdown-container p{margin:5px 0;font-size:20px;}
+.bounce-container{width:75px;height:50px;border:1px solid #ccc;box-shadow:0 0 10px rgba(0,0,0,.1);background:#fff;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;overflow:hidden;}
+.bounce-title{font-size:12px;font-weight:bold;margin:2px 0;}
+.bounce-canvas{width:100%;flex:1;}
+.progress-container{position:absolute;z-index:2000;width:60vw;height:10px;background:#ccc;border-radius:5px;overflow:hidden;}
+.progress-bar{height:100%;background:#4caf50;width:0%;transition:width .2s;}
+
+.side-btn{position:absolute;z-index:1001;padding:8px 12px;border-radius:5px;font-size:12px;cursor:grab;transition:background-color .3s;width:max-content;white-space:nowrap;min-width:fit-content;background:var(--btn-bg,transparent);}
+.lucky-btn{position:absolute;z-index:1002;padding:10px 14px;border-radius:6px;font-size:14px;font-weight:bold;cursor:grab;}
+#intersex-symbol{position:absolute;font-size:48px;color:#fff;text-shadow:0 0 3px #000;cursor:grab;z-index:1003;}
+.dice-container{position:absolute;width:80px;height:80px;border:2px solid #333;border-radius:10px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:40px;font-weight:bold;cursor:grab;z-index:1004;user-select:none;}
+.dice-text{font-size:12px;margin-top:2px;}
+.pet-container{position:absolute;width:120px;height:120px;background:#fff;border:2px solid #ff69b4;border-radius:10px;box-shadow:0 0 10px rgba(255,105,180,.3);z-index:1005;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:8px;font-size:12px;}
+.pet-face{font-size:48px;line-height:1;margin:0;padding:0;}
+.pet-love{width:100%;height:8px;background:#ffe4e1;border-radius:4px;overflow:hidden;}
+.pet-love-bar{height:100%;background:#ff69b4;transition:width .3s;}
+.pet-btn{padding:4px 8px;border:none;border-radius:4px;background:#ff69b4;color:#fff;cursor:pointer;font-size:11px;}
+.pet-btn:disabled{background:#ccc;cursor:not-allowed;}
+.spade-beta{position:absolute;font-size:48px;color:#000;text-shadow:0 0 2px #fff;cursor:grab;z-index:1006;display:flex;align-items:center;justify-content:center;width:48px;height:48px;}
+.spade-beta span{position:absolute;font-size:29px;color:#fff;text-shadow:0 0 2px #000;top:50%;left:50%;transform:translate(-50%,-50%);}
+
+#stats-panel{position:absolute;top:10px;left:10px;width:10vw;min-width:180px;max-width:280px;height:10vh;min-height:120px;max-height:200px;background:rgba(0,0,0,.55);color:#fff;font-size:12px;border-radius:8px;padding:8px;overflow-y:auto;z-index:9999;cursor:pointer;line-height:1.4;}
+#stats-panel h4{margin:0 0 4px;font-size:14px;text-align:center;}
+
+.cross-line{position:fixed;z-index:10000;pointer-events:none;}
+.cross-line.vertical{width:0.5%;height:100vh;top:0;animation:fadeOut 5s forwards;}
+.cross-line.horizontal{height:0.5%;width:100vw;left:0;animation:fadeOut 5s forwards;}
+@keyframes fadeOut{0%{opacity:1;}100%{opacity:0;}}
+</style>
+</head>
+<body>
+<div class="progress-container"><div class="progress-bar" id="progressBar"></div></div>
+
+<!-- 左右紧贴 -->
+<div class="side-btn element" id="addWindowBtn" style="left:0 !important;">+ 新窗口</div>
+<div class="side-btn element" id="delWindowBtn" style="right:0 !important;">- 删窗口</div>
+
+<div class="side-btn element" id="bringToFrontBtn" style="left:10px;">置顶网页</div>
+<div class="side-btn element" id="moveControl" style="left:10px;">
+  <input type="checkbox" id="moveSwitch" checked>
+  <label for="moveSwitch">移动开关</label>
+</div>
+<div class="lucky-btn element" id="luckyBtn">🎁 抽奖箱</div>
+
+<script>
+(() => {
+  'use strict';
+  const predefinedUrls = [
+"https://theporndude.com/zh","https://www.ixxx.com/zh/","https://rule34.xxx/","https://www.xnxx.com/","https://fikfap.com/","https://netflav.com/","https://tubesafari.com/","https://www.fuq.com/zh/","https://www.alohatube.com/","https://fuckmoral.com/zh","https://spankbang.com/","https://www.porngo.com/","https://www.youporn.com/","https://pornone.com/","https://avtoday.io/index","http://www.h528.com/","https://asmrpleasure.com/","https://www.redgifs.com/","https://m.hqporner.com/","https://www.naughtymachinima.com/","https://kemono.su/","https://motherless.com/","https://fullporner.com/","https://www.trendyporn.com/","https://letsjerk.tv/","https://pornobae.com/","https://pornmz.com/","https://www9.pornhd3x.tv/","https://joysporn.club/","https://xxxfree.watch/","https://foxnxx.com/","https://latestpornvideo.com/","https://anyporn.com/","https://kwiky.com/","https://www.xxxfollow.com/","https://ogfap.com/","https://www.avrebo.com/zh-CN","https://reelsmunkey.com/","https://xxtok.com/x/uxtsdwc6","https://www.extranaughty.com/home","https://javtrailers.com/shorts/live","https://www.heavy-r.com/","https://bdsmstreak.com/","https://l.clips4sale.com/search","https://hypnoporn.net/","https://hcbdsm.com/","https://cosxplay.com/","https://69story.com/","https://hhhbook.com/","https://aaanovel.com/","https://xx-book.com/","https://xbookcn.net/","https://www.caramelbbw.com/en/","https://www.naughtyblog.org/","https://bigboobsfilm.com/en/","https://titshits.com/en/","https://spicybigtits.com/en/","https://www.curvyerotic.com/","https://www.teensnow.com/","https://www.assoass.com/zh/","https://www.trannytube.tv/","https://www.shemaletubevideos.com/","https://spicytranny.com/en/",
+"https://transfap.to/","https://transdoe.com/","https://iamsissy.com/","https://www.incestflix.com/","https://milfnut.com/","https://www.incestvidz.com/","https://familypornhd.com/","https://milfcaps.com/home/","https://familyporner.com/","https://www.3dsexanime.xyz/","https://xanimu.com/","https://myhentaigallery.com/","https://myhentaicomics.com/","https://svscomics.com/","https://freeadultcomix.com/","https://bestporncomix.com/","https://www.erofus.com/","https://gedecomix.com/main/","https://www.palcomix.com/supportpal.html","https://www.wnacg.com/","https://www.177picyy.com/","https://www.ho5ho.com/","https://rokuhentai.com/","https://www.comicbox.xyz/index.html","https://syacomic.com/","https://hentaifox.com/","https://www.simply-hentai.com/web1","https://9hentai.so/#6g","https://hentairox.com/","https://asmhentai.com/","https://hentaihere.com/","https://ns0.com/"
+];
+  const imageApiUrls = ['https://moe.jitsu.top/img/?sort=r18','https://moe.jitsu.top/img/'
+];
+  const randomTexts = [
+"操你妈","低贱","舔逼","狗篮子","3cm小鸡巴","骚舌头","无能死精","短鸡巴","肉穴夹爆","撸爆浆",
+
+"冒着热气","包茎烂屌","发情母牛","洗脑","专属肉便器","原味内裤","淫妻","母狗","废物小阴蒂",
+
+"轮奸","交合处","骚逼外翻","射死精","淫足","淫奸","嘴穴","无脑喷精","撸废掉","奸淫",
+
+"射精","可悲","白丝淫脚","无脑勃起","乳交","私人母狗","大鸡巴祖宗","恶心","高跟鞋","猪卵",
+
+"稀尿精水","流精","处男龟头","撸屌哄精","放弃尊严","鸡巴喷精","盯榨吸脑","双腿发软","嗦屌跪舔","糜烂",
+
+"腥臭","浓酸","大臭肉屌","雄臭味","熏到无脑翻白眼","哼哧哼哧","淫腻酸臭脚底","高贵浓妆脸","甩屌","浑圆肥美",
+
+"淫臀","榨精丧志油脸","一股脑泄干净","雌臭巨乳","腥臭肉棒","风骚口红","榨精唇舌","淫毒","腥臭","精垢",
+
+"丧志犯贱","禁止射精","纹身太妹","糜烂腥臭大屌","玻尿酸整容奶","卵蛋","肥奶","肥乳驴奶","肉屌","美甲",
+
+"烟熏浓妆脸","无脑丧志","浓妆骚脸","无脑","顶胯甩屌","无脑流精","无脑撸屌","玉足","彻底排空","腥臭包浆脏臭鸡巴",
+
+"粗大黝黑大肉棒","精汁儿","嘴屄飞机杯","爆射","饱满淫肉","肛交","粉嫩屁眼","贱奴","垃圾母驴","屁眼",
+
+"大鸡巴主人","狠狠肏我","淫臭卵水骚逼","献媚雌服","浓郁雌骚腥臭","肥鲍熟缝","浓密阴毛","浓稠骚臭","闷穴骚臭","爆撸鸡巴",
+
+"变态快感","骚熟雌臭","色情吸脑淫毒","婊子母狗","浓稠种汁","屁眼外翻","淫熟油肉","黄臭骚精","肥臀巨乳","爽成傻逼",
+
+"淫熟暖屌肉洞","鸡巴套子","粘糊暖滑","熟女屌套","肥臀骚逼","骑乘发情","真空口交","肥腻的唇肉","龟头沟","吸屌驴脸",
+
+"雌熟媚穴","雌畜惨叫","无脑高潮","喷水母猪","熟女雌性荷尔蒙","浪荡肥逼","骚逼贱菊","浓郁骚臭的肉足","淫肥的肉臀","肥腚巨尻",
+
+"夸张淫肥","白嫩肉臀","精致妩媚","站街婊","尿垢","精垢","避孕套","大肉逼","骚阴唇","骚臭肉屌",
+
+"流精","废物阴蒂","浓臭贱逼","肥厚嘴唇","腥臊湿咸","尿骚鸡巴垢","婊子母狗","免费接客","堕落欲望","偷窥",
+
+"腐败你的脑子","劣质狗精","活活熏坏你的脑子","又骚又臭","沾满死精","软屌贱畜","漏尿泄精","恋臭肉垫","贱逼漏出淫水","贱货",
+
+"烂逼母狗","无脑肉畜","扣弄着自己的贱逼","拉扯着自己的阴唇","污垢","母蛆","妖艳榨精油婊脸","高潮","犯贱丧智","口穴榨精",
+
+"发情公狗","咕噜咕噜","饱满肥乳","雌熟肥乳","淫肥肉壶","淫靡","雌熟腻汗","黏腻肉洞","淫软嫩肉","榨精嘴穴",
+
+"超快速真空口交榨精","性欲","脏臭骚黄","满是精垢","恶臭鸡巴","淫骚肥尻","发情的母畜","泄精软屌","无脑交配","烂逼肉畜",
+
+"傻逼婊子","烂逼肉畜","蠢得和母猪一样","下贱痴女","翻着白眼喷卵流水","下贱的母畜","骚臭内裤","露出高潮脸","稀薄精液","漏尿黑逼",
+
+"站街母蛆","淫荡骚贱","婊子","站街婊妈","重口羞辱","玩弄","下贱母蛆","烂婊子","公共厕所","烂逼婊子",
+
+"阳痿肉虫","粗黑肉屌","骚臭鸡巴","下流淫荡","雌穴原地潮喷","直翻白眼","深吞肉屌","交配播种","雌杀肉棒","失去理智",
+
+"熟女肉穴","爱液","臭鸡巴","工口","妩媚","淫荡","口交脸","挤榨睾丸","超快速真空口交榨精","粗大糜烂骚臭肉棒",
+
+"早泄阳痿小肉棒","垃圾","流油肥臀","肏弄","下贱骚味","生殖器","阳痿废物","无脑流精","傻卵贡畜","身材丰满高挑",
+
+"漏尿肉瘤","深邃臀缝","阳痿野种","圣水" ,"磕头下跪","短屌贱种","女王","亲吻","高压黑心恶毒","贱种反差",
+
+"高贵冷艳","人模人样","嗦屌","母猪","大脑死机","赏赐","上贡","迟钝","侵蚀","舔舐啃咬",
+
+"无套内射","粗硕","淫贱嫩肉","流水","猪臀","流出淫水","骚狗","磕头","哼唧哼唧","白虎肥鲍",
+
+"爆溢肥美","淫靡愚蠢","腥臭包茎肥肠","噗湫噗湫","倒贴白给","鸡鸡牛奶","丝袜脚垫","油丝肉腿","浓酸裸足臭脚","先走汁",
+
+"骚臭脚汗","性欲","淫贱肥臀","油汗滑落","肥厚肉穴","油汗污垢","淫贱肥舌","舔弄马眼","滑精流尿","阳痿公畜",
+
+"肥臀内射","厚实巨硕","安产肥尻","淫靡肉响","肥熟骚屄","吊钟大奶子","浪肉肥臀","淫肥肉臀","浓郁雌臭","发出呻吟",
+
+"骚臭油汗","束起中指","肥腻双乳乱甩","黑丝美腿","红晕","骚屄","慰安套子","肉便器","鸡巴抚弄所","圆滚滚的卵蛋",
+
+"粘稠精浆","咕啾咕啾","浓郁的汗臭","淫骚的雌臭","强奸","丧智","性爱","抽插骚穴","精液灌满","骚母狗",
+
+"骚逼","粗壮公狗鸡巴","滚烫的精液","黄臭骚精","气味浓重","熏坏脑子","无脑撸屌喷精","露出","肥屄","憋不住的淫水",
+
+"粗屌顶胯翻飞","吸黑屌","骚逼迎合","甩奶吸屌","淫叫撸管","撸射","气味浓重","裤袜丝袜","肉茎","逗弄马眼",
+
+"淫靡的气味","足下骚狗","浓稠腥臭","噗湫噗湫","滋润","无脑翻白眼高潮","由慢到快","由浅入深","撸管","贱兮兮",
+
+"忍不住射出来","上交脑子","黑丝淫腿","自动憋精","大脑崩溃","脑瘫","淫脚","酸臭熏脑","鲜美裸足","爽到窒息",
+
+"蹂躏碾压","骚鸡巴","一滴不剩","榨射","清空精囊","熏坏大脑","无脑喷精","低贱的智商","雌熟浓重","白雾脚汗",
+
+"臭气","弱智脑瘫傻逼公猪","无脑高潮喷精","劣质死精","蛋囊","媚屌母畜","跪服","口交侍奉","手淫自慰","吻上唇印",
+
+"滋润鸡吧","熟妇口腔","红色嘴唇","腥臭精液","蛋蛋","齿痕掌印","淫穴","滚烫的精液","肥骚屁股","成熟妩媚",
+
+"骚乳淫身","垂涎欲滴","潮红翻白眼","娇嫩脸蛋","灌种","废物肉屌","搓出流精","失禁","淫乱骚贱","操成傻逼",
+
+"飞机杯","精盆","性欲处理器","淫纹","齁齁齁","播种灌精","大声淫叫","杂鱼阳痿","弱智恶心","熟女淫躯",
+
+"滋润鸡吧","熟妇口腔","红色嘴唇","腥臭精液","蛋蛋","齿痕掌印","淫穴","滚烫的精液","肥骚屁股","成熟妩媚",
+
+"骚乳淫身","垂涎欲滴","潮红翻白眼","娇嫩脸蛋","灌种","废物肉屌","搓出流精","失禁","淫乱骚贱","操成傻逼",
+
+"飞机杯","精盆","性欲处理器","淫纹","齁齁齁","播种灌精","大声淫叫","杂鱼阳痿","弱智恶心","熟女淫躯",
+
+"粗口爆骂","软小无力","粗屌野爹","贱种","杂种","阳痿软屌","轻蔑","流精","包茎肉屌","软趴趴",
+
+"颤抖流精","又黑又短","劣精","高潮喷浆","无脑上交","畜生","前列腺液","泄精","糜烂的屄","搓你的贱屌",
+
+"肥厚的阴唇","挤出大量白浆","顶胯甩屌","爆茎生殖器","雄根阴茎","下流的气味","包臀肉丝","雌骚","跪舔","犯贱",
+
+"废物","下贱","早泄","肉虫","贱狗","热气腾腾","黑丝","肉足","宝贝","猛吸",
+
+"汗酸","臭脚","巨屌","正太","操屁眼","壁尻","公厕","性感","阴茎","胯下",
+
+"瞬间勃起","短小","鸡鸡","骚浪","淫贱","酸丝臭足","鸡巴","脚臭","盯","勃起发情",
+
+"上瘾","贱死了","肏屄","脚垫","交配","剥夺","肥厚饱满","肉奶","乳晕","饱满",
+
+"肉腿","喘息","包皮","臭鸡巴","撸动","黄色腥臊污渍","裆部","脏臭","蕾丝内裤","油亮黑丝",
+
+"粗壮的鸡巴","烂臭腥臊","丁字裤","雌臭糜烂","鸡巴气味","浓烈腥臭","恶臭","内裤","屄臭","丰满",
+
+"肥熟","销魂","软糯","骚鸡巴","丝袜","马眼","鸡巴汁","奶沟","奶肉","黑褐色乳晕",
+
+"熟女","骚香体味","雌肉","肥腻饱满","浓烈气味","臭汗","喷精","浓厚油婊妆容脸","肉奶","白花花",
+
+"肥颤颤","粗黑肉屌","无比下流","吸精婊子","骚妈","骚贱母猪","淫穴","精垢","抽插","卵液",
+
+"小鸡巴","嗦屌","漏精","吸榨","色情","吮吸鸡巴","无脑","脚奴","公狗","儿子",
+
+"浓酸裸足","亲妈","祖宗","阳痿","烂皮软鸡巴","酸臭脚丫子","快感","脚趾缝","鸡巴头子","脚后跟",
+
+"骚卵蛋","喷水","鸡巴卵蛋","精囊","杂种狗精","暴毙","臭傻逼","冤种","巨乳","意淫",
+
+"自慰","奶子","小屌子","裤裆","抽奶光","奶香","跪","撸烂","呼吸困难","狗屌",
+
+"艳舞","无脑撸","无能","鄙视","屄","屌","嘲笑爆耍","调教","废物贱屌","调教泄精",
+
+"猪脸","颅内高潮","弱智","骚屁眼","操我妈逼","视奸","死妈","雌熟骚味","垃圾","贱狗精液",
+
+"熟女亲妈","黑丝足底","理智溶解","猪脑","粗屌","母驴贱逼","顶逼","逼肉","子宫","骚唇",
+
+"龟头","撩拨嘬吸","舌头","褶皱","肥逼","洩尿喷卵","子宫口","肉屄","肉套子","贱母猪",
+
+"屁股","臀肉","黑褐色的奶头","喷射奶水","精液","舔","孕肚","阴蒂","粗暴","揉捏",
+
+"失禁","潮吹","丰满肥硕","热气","雌臭","黏腻屁眼","侵袭","肛门","吸吮","贱鸡巴",
+
+"肥尻","吸臭","脚底","无脑傻逼","道德崩坏","三观崩坏","毫无底线","聊骚","败北","交精",
+
+"取悦","榨干","岔开双腿","猪奶","翻白眼","自毁形象","卵子","精子","疯逼甩臀","丰满婊子",
+
+"肥臀","大乳头","黑逼","烂逼","黑屁眼","劣质精液","足汗","敏感","黏糊糊","雌熟媚穴",
+
+"雌畜","双眼翻白","骚逼","淫水","淫肉","肥软肉浪","无脑肉畜","骚臭","内射","伺候",
+
+"粗壮黑屌","油脸","粗大发黑的奶头","骚嘴唇","腋缝","淫臭","高贵","下跪","丧志","甩屌",
+
+"噗噜噗噜","香汗淋漓","黑屄妓女","肏脸爆熏","无脑顶脸","口交侍奉","肛门亲吻","崇拜大鸡巴","丧志恶堕",
+
+"裸露","乳肉","玉腿","肌肤","婊子妆","眼影","烈焰红唇","青楼","卖逼","妓女",
+
+"屁股乱晃","猫步","口干舌燥","捂着裤裆","偷偷流精","处女","男女之事","美女","性瘾","挨操",
+
+"雄性","满身纹身","乳环","骚逼","跪地","爬行","骚脸","傻屄","跪求","野爹",
+
+"操屄","坐骑","肉便器","自毁","恶堕","露出","自慰","媚屌","上贡","侵犯",
+
+"痴迷精液","婊子","巨屌","吸精","妓院","全裸","淫啪","嫖娼","浓精","跪舔",
+
+"站街","堕落","磕头","淫叫","扭胯","献媚","淫水","身败名裂","性欲","喷卵",
+
+"受孕","跪地求饶","全裸站街","睾丸","精气","跪地求饶","送逼","磕头","喊爹","丧志",
+
+"辱骂","掌嘴","贬低","洗脑","媚黑","母婊","太妹","羞辱","改造","情侣奴",
+
+"百合","雌竞","互骂","接客","百合破坏","誓约之吻","婚礼","共堕","背叛","情趣玩具",
+
+"振动式假鸡巴","羞耻感","炮友","项圈","昂首挺胸","振动","窒息高潮","跳蛋","振动棒","摩擦阴蒂",
+
+"强制高潮","潮喷","敏感","骚逼","精臭味","雌臭味","汗臭味","淫臭","抠逼","卖逼",
+
+"校鸡","扶她","兽奸","逆强奸","败北","倒贴","红肿酸软","女绿","殴打","辱骂",
+
+"高潮喷卵","求饶","中指","全裸土下座","傻逼","败北","贱畜","便器","献妻","妩媚骚浪",
+
+"无接触撸管","撸管","寸止","龟责","无法射精","浓稠","稀薄","夹腿","母女","浓稠腥臭",
+
+"色欲支配","精液牛奶","淫乱无度","伺候","性福","侍奉","轮奸","淫笑","行房","精液拌饭",
+
+"屌毛","淫乱不堪","送逼","闪着淫光","撅着屁股","苗床","喷卵母猪","避孕套","失禁","骚水",
+
+"操了个爽","巨乳","呻吟勾引","欲火中烧","丰腴","舔着精液","白给","黑屌","谄媚","磕头求饶",
+
+"腥浓精粥","出轨","强忍性欲","雌小鬼","雌伏","鼓包","饥渴难耐","跪舔","上门送逼","内射",
+
+"欲火难耐","萝莉","烂裤裆","口便器","卵袋","乱伦","性侵","发情阈值","屁眼","男娘",
+
+"交配","做爱","欲求不满","便器母狗","张嘴接尿","精液料理","吞精","圣水","自慰","色欲上头",
+
+"卖骚","兔女郎","衣不遮体","满身精液","漏精","满身精斑","赤裸","阿黑颜","下等","精臭",
+
+"屈辱","失禁","勃起","侍寝","发情","人妖","雌堕","骚浪","自亵","精厕",
+
+"无耻","无底限","献媚",
+];
+  const luckyTexts = ['准许射精','禁止射精','毁灭高潮','谢谢参与'];
+  const countdownTexts =[
+"手掌握住阴茎撸动", "手指轻揉阴囊",  "手掌轻拍阴囊", "手掌揉捏阴囊", "食指中指夹住阴茎体撸动", "单指沿阴茎体腹侧滑动", "拇指食指呈环状夹住阴茎体撸动", "手掌包裹龟头并用掌心摩擦", "手指夹住阴茎体来回旋转", "指尖夹住龟头撸动", "手掌反复紧握挤压阴茎体", "手指反复从阴茎根撸到龟头", "指尖摩擦马眼和龟头顶端", "双手夹住阴茎搓弄"
+];
+  let zIndexCounter = 2, isMoving = true, globalSpeed = 1;
+  const dicePhrases = {1:['手'],2:['嘴'],3:['乳'],4:['屄'],5:['肛'],6:['屌']};
+
+  const stats = {startTime: Date.now(), iframeOpened: 0, iframeClosed: 0, textRefreshed: 0, luckyClicked: 0, diceClicked: 0, petInteracted: 0, countdownTriggered: 0, imageLoaded: 0};
+  const moveIntervals = new WeakMap();
+  const activeTimers = new Set();
+
+  /* ---------- 工具函数 ---------- */
+  function bringToFront(el){el.style.zIndex = ++zIndexCounter;}
+  function clamp(v,min,max){return Math.max(min,Math.min(v,max));}
+  function randomColor(){return 'hsl('+Math.floor(Math.random()*360)+',100%,65%)';}
+
+  /* ---------- 彩色侧边按钮 ---------- */
+  function colorizeSideBtns(){
+    document.querySelectorAll('.side-btn').forEach(btn=>{
+      btn.style.setProperty('--btn-bg', randomColor());
+    });
+  }
+  colorizeSideBtns();
+  const colorTimer = setInterval(colorizeSideBtns, 2000);
+  activeTimers.add(colorTimer);
+
+  /* ---------- 重叠检测 ---------- */
+  function overlaps(a,b){return !(a.right<b.left||a.left>b.right||a.bottom<b.top||a.top>b.bottom);}
+  function iframeOverlaps(rect){
+    const iframes=document.querySelectorAll('.iframe-container');
+    for(const el of iframes){
+      if(el===rect) continue;
+      if(overlaps(rect.getBoundingClientRect(),el.getBoundingClientRect())) return true;
+    }
+    return false;
+  }
+
+  /* ---------- 移动 ---------- */
+  function move(el,mode='full'){
+    if(moveIntervals.has(el)) return;
+    const isIframe=el.classList.contains('iframe-container');
+    const baseSpeed=isIframe?globalSpeed*0.3:globalSpeed*3;
+    let vx=0,vy=0;
+    if(mode==='vertical') vy=(Math.random()-.5)*baseSpeed*(innerHeight/1000);
+    else{vx=(Math.random()-.5)*baseSpeed*(innerWidth/1000);vy=(Math.random()-.5)*baseSpeed*(innerHeight/1000);}
+    const initX=el.id==='addWindowBtn'?0:el.id==='delWindowBtn'?innerWidth-el.offsetWidth:Math.max(0,Math.random()*(innerWidth-el.offsetWidth));
+    const initY=Math.max(0,Math.random()*(innerHeight-el.offsetHeight));
+    el.style.left=initX+'px';el.style.top=initY+'px';
+    const tick=()=>{
+      if(!isMoving){moveIntervals.delete(el);return;}
+      let speed=baseSpeed;
+      if(isIframe && iframeOverlaps(el)) speed*=4;
+      if(!isIframe) speed*=0.7;
+      let x=parseFloat(el.style.left),y=parseFloat(el.style.top);
+      x+=vx*speed;y+=vy*speed;
+      const maxX=innerWidth-el.offsetWidth,maxY=innerHeight-el.offsetHeight;
+      if(x<=0){x=0;vx=-vx;}else if(x>=maxX){x=maxX;vx=-vx;}
+      if(y<=0){y=0;vy=-vy;}else if(y>=maxY){y=maxY;vy=-vy;}
+      el.style.left=x+'px';el.style.top=y+'px';
+      moveIntervals.set(el,requestAnimationFrame(tick));
+    };
+    moveIntervals.set(el,requestAnimationFrame(tick));
+    el.addEventListener('mousedown',()=>bringToFront(el));
+  }
+  function stopMove(el){cancelAnimationFrame(moveIntervals.get(el));moveIntervals.delete(el);}
+
+  /* ---------- 动态数量计算 ---------- */
+  function calcTargetIframes(){
+    const area=innerWidth*innerHeight;
+    let target=Math.floor(area/200000);
+    return Math.max(innerWidth<=768?2:4,Math.min(target,innerWidth<=768?4:16));
+  }
+
+  /* ---------- 创建 iframe ---------- */
+  function createIframe(){
+    const target=calcTargetIframes();
+    const current=document.querySelectorAll('.iframe-container').length;
+    if(current>=target) return;
+    stats.iframeOpened++;
+    const box=document.createElement('div');box.className='element iframe-container';
+    const defaultW = innerWidth <= 768 ? 520 : 600;const defaultH = innerWidth <= 768 ? 240 : 300;
+    box.style.setProperty('--w',defaultW+'px');box.style.setProperty('--h',defaultH+'px');
+const boxW = parseInt(box.style.getPropertyValue('--w') || defaultW);
+const boxH = parseInt(box.style.getPropertyValue('--h') || defaultH);
+box.style.left = Math.max(0, Math.min(Math.random() * (innerWidth  - boxW), innerWidth  - boxW)) + 'px';
+box.style.top  = Math.max(0, Math.min(Math.random() * (innerHeight - boxH), innerHeight - boxH)) + 'px';
+
+    const iframe=document.createElement('iframe');iframe.src=predefinedUrls[Math.floor(Math.random()*predefinedUrls.length)];iframe.style.border='none';box.appendChild(iframe);
+    const sliderBox=document.createElement('div');sliderBox.className='slider-bar';
+    const wSlider=document.createElement('input');wSlider.type='range';wSlider.min=160;wSlider.max=Math.floor(innerWidth*0.9);wSlider.value=defaultW;
+    wSlider.addEventListener('input',e=>{
+      const newW=clamp(parseInt(e.target.value),160,Math.floor(innerWidth*0.9));
+      box.style.setProperty('--w',newW+'px');
+      let left=parseFloat(box.style.left);left=clamp(left,0,innerWidth-newW);box.style.left=left+'px';
+    });
+    const hSlider=document.createElement('input');hSlider.type='range';hSlider.min=100;hSlider.max=Math.floor(innerHeight*0.9);hSlider.value=defaultH;
+    hSlider.addEventListener('input',e=>{
+      const newH=clamp(parseInt(e.target.value),100,Math.floor(innerHeight*0.9));
+      box.style.setProperty('--h',newH+'px');
+      let top=parseFloat(box.style.top);top=clamp(top,0,innerHeight-newH);box.style.top=top+'px';
+    });
+    sliderBox.appendChild(wSlider);sliderBox.appendChild(hSlider);box.appendChild(sliderBox);
+    document.body.appendChild(box);if(isMoving) move(box);
+    let pressTimer;box.addEventListener('mousedown',()=>pressTimer=setTimeout(()=>window.open(iframe.src,'_blank'),800));box.addEventListener('mouseup',()=>clearTimeout(pressTimer));box.addEventListener('mouseleave',()=>clearTimeout(pressTimer));
+  }
+
+  /* ---------- 图片 ---------- */
+  function createImageElement(){
+    const max=innerWidth<=768?2:4;
+    const current=document.querySelectorAll('.image-container').length;
+    if(current>=max){const imgs=document.querySelectorAll('.image-container');if(imgs.length) imgs[0].remove();}
+    const box=document.createElement('div');box.className='element image-container';
+    const img=new Image();img.src=imageApiUrls[0]+'?t='+Date.now();
+    img.onload=()=>stats.imageLoaded++;
+    box.appendChild(img);document.body.appendChild(box);if(isMoving) move(box);
+    if(Math.random()<0.3){box.style.transition='transform 2s';box.style.transform='scale(1.5)';setTimeout(()=>box.style.transform='scale(1)',2000);}
+  }
+
+  /* ---------- 文字 ---------- */
+  const TEXT_TARGET=innerWidth<=768?8:16;
+  function refreshAllTexts(){
+    let current=document.querySelectorAll('.text-container').length;
+    while(current>TEXT_TARGET){const old=document.querySelector('.text-container');if(old){old.remove();stats.textRefreshed++;}current--;}
+    while(document.querySelectorAll('.text-container').length<TEXT_TARGET){
+      const box=document.createElement('div');box.className='element text-container';
+      const p=document.createElement('p');p.textContent=randomTexts[Math.floor(Math.random()*randomTexts.length)];
+      p.style.color=`hsl(${Math.random()*360},100%,50%)`;p.style.fontSize=`${14+Math.random()*16}px`;p.style.textShadow='-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000';
+      box.appendChild(p);document.body.appendChild(box);if(isMoving) move(box);
+      if(Math.random()<0.3){box.style.transition='transform 2s';box.style.transform='scale(1.5)';setTimeout(()=>box.style.transform='scale(1)',2000);}
+    }
+    const timer=setTimeout(refreshAllTexts,30000+Math.random()*30000);activeTimers.add(timer);
+  }
+  refreshAllTexts();
+
+  /* ---------- 倒计时 ---------- */
+  (function createSingleCountdown(){
+    if(document.querySelector('.countdown-container')) return;
+    const box=document.createElement('div');box.className='element countdown-container';
+    box.style.left=`${Math.max(0,Math.random()*(innerWidth-150))}px`;box.style.top=`${Math.max(0,Math.random()*(innerHeight-100))}px`;
+    const p1=document.createElement('p');p1.textContent=Math.floor(Math.random()*56)+5;box.appendChild(p1);
+    const p2=document.createElement('p');box.appendChild(p2);document.body.appendChild(box);if(isMoving) move(box);
+    let cd=parseInt(p1.textContent);
+    const timer=setInterval(()=>{p1.textContent=cd;if(cd<=0){p2.textContent=countdownTexts[Math.floor(Math.random()*countdownTexts.length)];stats.countdownTriggered++;cd=Math.floor(Math.random()*56)+5;}cd--;},1000);activeTimers.add(timer);
+  })();
+
+  /* ---------- 其余组件 ---------- */
+  (function createSlowBounce(){
+    if(document.querySelector('.bounce-container')) return;
+    const box=document.createElement('div');box.className='element bounce-container';
+    box.style.left=`${Math.max(0,Math.random()*(innerWidth-75))}px`;box.style.top=`${Math.max(0,Math.random()*(innerHeight-50))}px`;
+    const title=document.createElement('div');title.textContent='撸出精液';title.className='bounce-title';
+    const cvs=document.createElement('canvas');cvs.className='bounce-canvas';cvs.width=75;cvs.height=35;
+    box.appendChild(title);box.appendChild(cvs);document.body.appendChild(box);if(isMoving) move(box);
+    const ctx=cvs.getContext('2d');const r=6;let y=r,vy=1.7;
+    (function animate(){ctx.clearRect(0,0,cvs.width,cvs.height);y+=vy;if(y<=r){y=r;vy=-vy;}if(y>=cvs.height-r){y=cvs.height-r;vy=-vy;}ctx.beginPath();ctx.arc(cvs.width/2,y,r,0,Math.PI*2);ctx.fillStyle='#ff5722';ctx.fill();requestAnimationFrame(animate);})();
+  })();
+
+  const progressBox=document.querySelector('.progress-container'),bar=document.getElementById('progressBar');
+  progressBox.style.top='10px';progressBox.style.left='10px';progressBox.style.width='60vw';
+  (function moveProgress(){const x=Math.max(0,Math.random()*(innerWidth-progressBox.offsetWidth));const y=Math.max(0,Math.random()*(innerHeight-progressBox.offsetHeight));progressBox.style.left=x+'px';progressBox.style.top=y+'px';const timer=setTimeout(moveProgress,4000+Math.random()*4000);activeTimers.add(timer);})();
+  (function randomFull(){let p=parseFloat(bar.style.width)||0;p+=Math.random()-.5;p=clamp(p,0,100);bar.style.width=p+'%';if(p>=100){bar.style.width='0%';document.querySelectorAll('.iframe-container').forEach(box=>{box.querySelector('iframe').src=predefinedUrls[Math.floor(Math.random()*predefinedUrls.length)];bringToFront(box);});}const timer=setTimeout(randomFull,1000);activeTimers.add(timer);})();
+
+  function createDice(){
+    const dice=document.createElement('div');dice.className='dice-container element';
+    dice.style.left=Math.max(0,Math.random()*(innerWidth-80))+'px';dice.style.top=Math.max(0,Math.random()*(innerHeight-80))+'px';
+    dice.innerHTML='<span class="dice-num" style="font-size:40px;line-height:1;">🎲</span><span class="dice-text" style="font-size:12px;line-height:1;"></span>';
+    const diceNum=dice.querySelector('.dice-num'),diceText=dice.querySelector('.dice-text');
+    document.body.appendChild(dice);if(isMoving) move(dice);
+    dice.addEventListener('click',()=>{const result=Math.floor(Math.random()*6)+1;const phrase=dicePhrases[result][Math.floor(Math.random()*dicePhrases[result].length)];diceNum.textContent=result;diceText.textContent=phrase;stats.diceClicked++;setTimeout(()=>{diceNum.textContent='🎲';diceText.textContent='';},2000);});
+  }
+  createDice();
+
+  let petContainer=null,petLove=100,petAlive=true,petInterval=null;
+  function createPet(){
+    if(document.querySelector('.pet-container')) return;
+    petContainer=document.createElement('div');petContainer.className='pet-container element';
+    petContainer.style.left=Math.max(0,Math.random()*(innerWidth-120))+'px';petContainer.style.top=Math.max(0,Math.random()*(innerHeight-120))+'px';
+    petContainer.innerHTML='<div class="pet-face">👧</div><div class="pet-love"><div class="pet-love-bar" style="width:100%"></div></div><button class="pet-btn">💧 上交精液</button>';
+    document.body.appendChild(petContainer);if(isMoving) move(petContainer);bringToFront(petContainer);
+    const loveBar=petContainer.querySelector('.pet-love-bar'),loveBtn=petContainer.querySelector('.pet-btn'),face=petContainer.querySelector('.pet-face');
+    function updatePet(){if(!petAlive) return;petLove-=Math.floor(Math.random()*5)+1;if(petLove<=0){petLove=0;petAlive=false;face.textContent='😭';loveBtn.disabled=true;setTimeout(()=>{petContainer.remove();petContainer=null;const timer=setTimeout(createPet,5000+Math.random()*10000);activeTimers.add(timer);},2000);return;}if(petLove<30) face.textContent='😢';else if(petLove<60) face.textContent='😐';else face.textContent='😊';loveBar.style.width=petLove+'%';}
+    loveBtn.addEventListener('click',()=>{if(petAlive){petLove=Math.min(100,petLove+Math.floor(Math.random()*15)+10);loveBar.style.width=petLove+'%';face.textContent='😍';stats.petInteracted++;setTimeout(()=>{if(petAlive) updatePet();},1000);}});petInterval=setInterval(updatePet,2000);activeTimers.add(petInterval);
+  }
+  createPet();
+
+  function createSpadeBeta(){
+    const sb=document.createElement('div');sb.className='spade-beta element';
+    sb.style.left=Math.max(0,Math.random()*(innerWidth-48))+'px';sb.style.top=Math.max(0,Math.random()*(innerHeight-48))+'px';
+    sb.innerHTML='♠<span>β</span>';document.body.appendChild(sb);if(isMoving) move(sb);
+    let isBeta=true;const span=sb.querySelector('span');
+    const checkCollision=()=>{const rect=sb.getBoundingClientRect();if(rect.left<=0||rect.right>=innerWidth||rect.top<=0||rect.bottom>=innerHeight){isBeta=!isBeta;span.textContent=isBeta?'β':'Q';}requestAnimationFrame(checkCollision);};checkCollision();
+  }
+  createSpadeBeta();
+
+  /* ---------- 事件绑定 ---------- */
+  document.getElementById('addWindowBtn').addEventListener('click',createIframe);
+  document.getElementById('delWindowBtn').addEventListener('click',()=>{const iframes=document.querySelectorAll('.iframe-container');if(iframes.length){iframes[Math.floor(Math.random()*iframes.length)].remove();stats.iframeClosed++;}});
+  document.getElementById('bringToFrontBtn').addEventListener('click',()=>document.querySelectorAll('.iframe-container').forEach(el=>bringToFront(el)));
+  document.getElementById('moveSwitch').addEventListener('change',e=>{isMoving=e.target.checked;document.querySelectorAll('.element').forEach(el=>{if(isMoving){if(el.id==='addWindowBtn'||el.id==='delWindowBtn') move(el,'vertical');else if(el.classList.contains('side-btn')) move(el,'vertical');else move(el);}else stopMove(el);});});
+  document.querySelectorAll('.side-btn').forEach(btn=>{if(btn.id==='addWindowBtn'){btn.style.left='0';btn.style.right='';}else if(btn.id==='delWindowBtn'){btn.style.right='0';btn.style.left='';}else{btn.style.left=Math.random()<0.5?'10px':'';btn.style.right=btn.style.left?'':'10px';}btn.style.top=Math.max(0,Math.random()*(innerHeight-btn.offsetHeight))+'px';if(isMoving){if(btn.id==='addWindowBtn'||btn.id==='delWindowBtn') move(btn,'vertical');else move(btn,'vertical');}});
+  const luckyBtn=document.getElementById('luckyBtn');luckyBtn.style.background='gold';luckyBtn.style.left=Math.max(0,Math.random()*(innerWidth-luckyBtn.offsetWidth))+'px';luckyBtn.style.top=Math.max(0,Math.random()*(innerHeight-luckyBtn.offsetHeight))+'px';luckyBtn.addEventListener('click',()=>{alert(luckyTexts[Math.floor(Math.random()*luckyTexts.length)]);stats.luckyClicked++;});if(isMoving) move(luckyBtn);
+  (function createIntersexSymbol(){if(document.getElementById('intersex-symbol')) return;const sym=document.createElement('div');sym.id='intersex-symbol';sym.innerHTML='⚧';sym.className='element';sym.style.cssText=`font-size:48px;color:#fff;text-shadow:0 0 3px #000;cursor:grab;z-index:1003;left:${Math.max(0,Math.random()*(innerWidth-48))}px;top:${Math.max(0,Math.random()*(innerHeight-48))}px;`;document.body.appendChild(sym);if(isMoving) move(sym);})();
+
+  /* ---------- 统计面板 ---------- */
+  let statsPanel=null;function createStatsPanel(){if(statsPanel) return;statsPanel=document.createElement('div');statsPanel.id='stats-panel';statsPanel.innerHTML='<h4>实时统计</h4><div id="stats-content">加载中...</div>';document.body.appendChild(statsPanel);updateStatsPanel();statsPanel.addEventListener('click',()=>{const runtime=Math.floor((Date.now()-stats.startTime)/1000);alert(`📊 完整统计\n\n⏱ 运行时长：${runtime} 秒\n📤 iframe打开：${stats.iframeOpened} 次\n📥 iframe关闭：${stats.iframeClosed} 次\n📝 文本刷新：${stats.textRefreshed} 次\n🎁 抽奖点击：${stats.luckyClicked} 次\n🎲 骰子点击：${stats.diceClicked} 次\n🐾 宠物互动：${stats.petInteracted} 次\n⏳ 倒计时触发：${stats.countdownTriggered} 次\n🖼 图片加载：${stats.imageLoaded} 次`);});moveStatsPanel();const timer=setInterval(moveStatsPanel,60000);activeTimers.add(timer);}
+  function moveStatsPanel(){if(!statsPanel) return;const pad=8;const w=statsPanel.offsetWidth,h=statsPanel.offsetHeight;const side=Math.floor(Math.random()*4);let x,y;switch(side){case 0:x=Math.random()*(window.innerWidth-w);y=pad;break;case 1:x=window.innerWidth-w-pad;y=Math.random()*(window.innerHeight-h);break;case 2:x=Math.random()*(window.innerWidth-w);y=window.innerHeight-h-pad;break;case 3:x=pad;y=Math.random()*(window.innerHeight-h);break;}statsPanel.style.left=x+'px';statsPanel.style.top=y+'px';}
+  function updateStatsPanel(){if(!statsPanel) return;const sorted=Object.entries(stats).filter(([k])=>k!=='startTime').sort((a,b)=>b[1]-a[1]).slice(0,4);const runtime=Math.floor((Date.now()-stats.startTime)/1000);let html=`<strong>运行：${runtime}s</strong><br>`;const labels={iframeOpened:'📤 打开',iframeClosed:'📥 关闭',textRefreshed:'📝 文本刷新',luckyClicked:'🎁 抽奖',diceClicked:'🎲 骰子',petInteracted:'🐾 宠物',countdownTriggered:'⏳ 倒计时',imageLoaded:'🖼 图片'};sorted.forEach(([key,val])=>{html+=`${labels[key]}：${val}<br>`;});statsPanel.querySelector('#stats-content').innerHTML=html;}
+  const updateTimer=setInterval(updateStatsPanel,1000);activeTimers.add(updateTimer);createStatsPanel();
+
+  function randomColorMix(){const r=Math.floor(Math.random()*256),g=Math.floor(Math.random()*256),b=Math.floor(Math.random()*256);return `rgb(${r},${g},${b})`;}
+  function createRandomLine(){const isVertical=Math.random()<0.5;const line=document.createElement('div');line.className=`cross-line ${isVertical?'vertical':'horizontal'}`;line.style.backgroundColor=randomColorMix();line.style.left=isVertical?Math.random()*100+'%':'0';line.style.top=isVertical?'0':Math.random()*100+'%';document.body.appendChild(line);const t=setTimeout(()=>line.remove(),5000);activeTimers.add(t);}
+  const lineTimer=setInterval(createRandomLine,1500+Math.random()*2000);activeTimers.add(lineTimer);
+
+  /* ---------- 首次生成 ---------- */
+  function initIframes(){const target=calcTargetIframes();for(let i=0;i<target;i++) createIframe();}
+  initIframes();
+
+  /* ---------- 主动生成图片 ---------- */
+  (function initImages(){
+    const targetImg=innerWidth<=768?4:8;
+    for(let i=0;i<targetImg;i++) createImageElement();
+  })();
+
+  /* ---------- 清理 ---------- */
+  window.addEventListener('beforeunload',()=>{activeTimers.forEach(clearTimeout);activeTimers.forEach(clearInterval);moveIntervals.forEach((_,el)=>stopMove(el));});
+  <!-- ===== 把下面整段复制后，直接粘到 </body> 之前即可 ===== -->
+(() => {
+  'use strict';
+
+  /* 从已有 predefinedUrls 随机抽一条 */
+  const pickFromPredefined = () => predefinedUrls[Math.floor(Math.random() * predefinedUrls.length)];
+
+  /* 删除失效窗口并生成新窗口（沿用原 createIframe） */
+  function replaceBroken(box) {
+    stats.iframeClosed++;
+    box.remove();
+    createIframe();          // 复用你写好的函数
+  }
+
+  /* 检测单个 iframe 是否已失效 */
+  function isBroken(iframe) {
+    try {
+      const doc = iframe.contentDocument || iframe.contentWindow.document;
+      if (!doc || doc.readyState !== 'complete') return true;
+      const t = (doc.title || '').toLowerCase();
+      return t.includes('404') || t.includes('无法访问') || t.includes('拒绝访问');
+    } catch {
+      /* 跨域/拒绝访问 视为失效 */
+      return true;
+    }
+  }
+
+  /* 每 60 秒巡检一次 */
+  const timer = setInterval(() => {
+    document.querySelectorAll('.iframe-container iframe').forEach(iframe => {
+      if (isBroken(iframe)) replaceBroken(iframe.parentElement);
+    });
+  }, 60000);
+  activeTimers.add(timer);   // 页面卸载时统一清理
+})();
+
+<!-- ===== 复制结束 ===== -->
+
+(() => {
+  'use strict';
+
+  /* 深拷贝一份原数组，用作可抽池 */
+  let pool = [...predefinedUrls];
+
+  /* 洗牌算法（Fisher–Yates） */
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  /* 拦截 createIframe，让它始终从 pool 取，用完再补 */
+  const rawCreateIframe = createIframe;
+  window.createIframe = function () {
+    if (pool.length === 0) {
+      /* 全部用完，重新洗牌 */
+      pool = shuffle([...predefinedUrls]);
+    }
+    /* 取一条未用过的 */
+    const url = pool.pop();
+
+    /* 复用你原来的创建逻辑，只是强制改 src */
+    rawCreateIframe();
+    const latestBoxes = document.querySelectorAll('.iframe-container');
+    const box = latestBoxes[latestBoxes.length - 1];
+    if (box) {
+      box.querySelector('iframe').src = url;
+    }
+  };
+
+  /* 首次把池子打乱，保证顺序也是随机的 */
+  shuffle(pool);
+})();
+
+(() => {
+  /* 降低骰子层级到 1（低于 iframe 的 2） */
+  function fixDiceZ() {
+    document.querySelectorAll('.dice-container').forEach(d => {
+      d.style.zIndex = 1;
+    });
+  }
+  /* 首次执行 + 每次新建骰子后执行 */
+  fixDiceZ();
+  const rawCreateDice = createDice;
+  window.createDice = function () {
+    rawCreateDice();
+    fixDiceZ();
+  };
+})();
+
+(() => {
+  /* ========= 1. 右上角固定计数器 ========= */
+  const coinBox = document.createElement('div');
+  coinBox.id = 'coinBox';
+  coinBox.style.cssText = `
+    position:fixed; top:10px; right:10px; z-index:9999;
+    background:#0008; color:#fff; padding:6px 12px;
+    border-radius:6px; font:16px/1 Arial;
+  `;
+  coinBox.innerHTML = '<span id="coinVal">0</span> ml';
+  document.body.appendChild(coinBox);
+
+  let coins = 0;                     // 当前金币
+  const setCoins = v => {            // 写回显示 & 限制 0-6
+    coins = Math.min(6, Math.max(0, v));
+    coinVal.textContent = coins.toFixed(1);
+  };
+
+  /* ========= 2. 边界碰撞检测 ========= */
+  const hitMap = new WeakMap();
+  const scan = () => {
+    /* 黑桃、图片、文字容器：+0.5 */
+    document.querySelectorAll('.spade-beta, .image-container, .text-container')
+            .forEach(el => collide(el, 0.5));
+
+    /* 宠物容器：+1 */
+    document.querySelectorAll('.pet-container')
+            .forEach(el => collide(el, 1));
+
+    /* 双性人符号：±1 */
+    document.querySelectorAll('#intersex-symbol')
+            .forEach(el => collide(el, Math.random() < 0.5 ? 1 : -1));
+  };
+
+  function collide(el, delta) {
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const hit = r.left <= 0 || r.right >= innerWidth ||
+                r.top  <= 0 || r.bottom >= innerHeight;
+    const last = hitMap.get(el);
+    if (hit && !last) setCoins(coins + delta);
+    hitMap.set(el, hit);
+  }
+
+  /* 200 ms 扫描一次 */
+  setInterval(scan, 200);
+
+  /* ========= 3. 每秒自动 +0.1 ml & 超过 6 持续扣除 ========= */
+  setInterval(() => {
+    setCoins(coins > 6 ? coins - 0.5 : coins + 0.1);
+  }, 1000);
+
+  /* ========= 4. 通用扣费 & 事件挂接 ========= */
+  const pay = (cost, cb) => {
+    if (coins < cost) {
+      alert(`精液不足！需要 ${cost} ml，当前只有 ${coins.toFixed(1)} ml。`);
+      return false;
+    }
+    setCoins(coins - cost);
+    cb?.();
+    return true;
+  };
+
+  const hook = (sel, cost, cb) => {
+    const loop = () => {
+      const el = document.querySelector(sel);
+      if (el && !el._coinHook) {
+        el._coinHook = true;
+        el.addEventListener('click', e => pay(cost, cb) || e.stopImmediatePropagation(), true);
+      }
+    };
+    setInterval(loop, 500);
+  };
+
+  /* 骰子点击 */
+  hook('.dice-container', 1, () => {
+    const res = Math.floor(Math.random() * 6) + 1;
+    switch (res) {
+      case 1: setCoins(Math.floor(coins / 2)); break;
+      case 3: setCoins(coins - Math.floor(coins / 4)); break;
+      case 5: setCoins(coins - Math.floor(coins / 8)); break;
+      case 6: setCoins(coins * 2); break;
+    }
+    stats.diceClicked++;
+  });
+
+  /* 抽奖宝箱 */
+  hook('#luckyBtn', 1, () => {
+    if (Math.random() < 0.1) setCoins(coins + 100); // 1/10 额外 +100
+    stats.luckyClicked++;
+  });
+
+  /* 喂宠物 */
+  hook('.pet-btn', 1, () => {
+    /* 喂食后获得“好感度整数的一半”金币（向下取整） */
+    const gain = Math.floor(Math.random() * 3); // 0~2 → 0~1
+    setCoins(coins + Math.floor(gain / 2));
+  });
+
+  /* ========= 5. 初始金币 ========= */
+  setCoins(2);
+})();
+
+
+(() => {
+  /* ===== 1. 新网页池（可自行增删） ===== */
+  const LOTTO_URLS = [
+    "https://www.gigantits.com/","slushe.com","fikfap.com","18h.mm-cg.com","sxyprn.com","www.eporner.com","www.tubegalore.com","hypnotube.com","www.xshemale.tv","allporncomic.com","hanime1.me","www.3movs.com","beeg.com","www.redtube.com","allporncomic.com","8muses.io","www.eporner.com","beeg.com","fikfap.com","netflav.com","bdsmstreak.com","hentaixyuri.com","www.incext.com","hentaixcomic.com","watchporn.to","www.incext.com",
+"hentaixyuri.com","hentaixcomic.com","cn.pornhub.com","netflav.com","www.youporn.com","x-tg.tube","watchporn.to","cn.pornhub.com","www.zzcartoon.com","www.thumbzilla.com","allporncomic.com","tik.porn","en.thehentai.net","sharesome.com","femefun.com","8muses.io","allporncomics.co","waptap.com","cartoonporn.pro","www.xmegadrive.com","multporn.net","nhentai.net","www.tabootube.xxx","shemalez.com",
+"www.fuq.com","yespornpleasexxx.com","veporn.com","inporn.com","www.tubebdsm.com","www.xmegadrive.com","familyporn.tv","4kporn.xxx","www.xtits.com","hentaixdickgirl.com","veporn.com","porcore.com","cn.pornhub.com","www.xtits.com","txxx.com","www.ass4all.com","doujins.com","cn.pornhub.com","sharesome.com","18comic.vip","ilikecomix.com","sfmcompile.club","waptap.com","taboodude.com","sharesome.com","www.assoass.com"
+  ];
+
+  /* ===== 2. 创建抽奖结果窗口 ===== */
+  const lotBox = document.createElement('div');
+  lotBox.id = 'lottoBox';
+  lotBox.style.cssText = `
+    position:fixed;left:50%;bottom:20px;transform:translateX(-50%);
+    width:90%;max-width:400px;height:60px;background:#fff;
+    border:2px solid #333;border-radius:8px;z-index:9999;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 4px 12px rgba(0,0,0,.3);
+  `;
+  lotBox.innerHTML = `<a id="lottoLink" href="#" target="_blank" style="font:16px Arial;color:#000;text-decoration:none;">加载中...</a>`;
+  lotBox.style.display = 'none';
+  document.body.appendChild(lotBox);
+
+  /* ===== 3. 抽奖箱点击事件 ===== */
+  const luckyBtn = document.getElementById('luckyBtn');
+  if (luckyBtn) {
+    luckyBtn.addEventListener('click', () => {
+      /* 随机选网址 */
+      const url = LOTTO_URLS[Math.floor(Math.random() * LOTTO_URLS.length)];
+      lottoLink.href = url;
+      lottoLink.textContent = url;
+
+      /* 显示窗口 */
+      lotBox.style.display = 'flex';
+
+      /* 点击链接后跳转并关闭窗口 */
+      lottoLink.onclick = () => {
+        lotBox.style.display = 'none';
+        return true; // 允许跳转
+      };
+    });
+  }
+})();
+
+
+
+
+
+
+})();
+</script>
+</body>
+</html>
