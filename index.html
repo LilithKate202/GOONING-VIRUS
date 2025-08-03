@@ -817,11 +817,18 @@ box.style.top  = Math.max(0, Math.min(Math.random() * (innerHeight - boxH), inne
 })();
 
 
-
+(() => {
+  const cd = document.querySelector('.countdown-container');
+  if (cd) {
+    cd.style.backgroundColor = 'rgba(255,255,255,0.4)'; /* 白色半透明 40% */
+    cd.style.color = '#000';                              /* 文字黑色 */
+  }
+})();
 
 
 })();
 </script>
 </body>
 </html>
+
 
