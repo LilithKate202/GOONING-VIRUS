@@ -5,6 +5,18 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
 <title>沉迷色情</title>
 <style>
+	.scrolling-text {
+    width: 100%; /* 容器宽度 */
+    overflow: hidden; /* 隐藏超出部分 */
+    position: fixed; /* 固定在页面顶部 */
+    top: 0; /* 距离页面顶部的距离 */
+    background-color: rgba(0, 0, 0, 0.7); /* 背景颜色（半透明） */
+    color: white; /* 文字颜色 */
+    padding: 10px 0; /* 上下内边距 */
+    text-align: center; /* 文字居中 */
+    z-index: 1000; /* 确保在页面最上层 */
+}
+	
 :root{--iframeW:300px;--iframeH:200px;}
 *{margin:0;padding:0;box-sizing:border-box;}
 html,body{height:100%;overflow:hidden;font-family:Arial;background:linear-gradient(120deg,#ff9a9e 0%,#fad0c4 50%,#fad0c4 100%);animation:bgChange 4s ease-in-out infinite alternate;}
@@ -48,11 +60,14 @@ iframe{width:100%;height:100%;border:0;}
 </style>
 </head>
 <body>
+	<div class="scrolling-text">
+    <div class="text-content">撸动你的肉棒♥榨取你的精液♥</div>
+</div> 
 <div class="progress-container"><div class="progress-bar" id="progressBar"></div></div>
 
 <!-- 左右紧贴 -->
-<div class="side-btn element" id="addWindowBtn" style="left:0 !important;">+ 新窗口</div>
-<div class="side-btn element" id="delWindowBtn" style="right:0 !important;">- 删窗口</div>
+<div class="side-btn element" id="addWindowBtn" style="left:0 !important;">+1添加色情窗口</div>
+<div class="side-btn element" id="delWindowBtn" style="right:0 !important;">-1删除色情窗口</div>
 
 <div class="side-btn element" id="bringToFrontBtn" style="left:10px;">置顶网页</div>
 <div class="side-btn element" id="moveControl" style="left:10px;">
@@ -65,10 +80,12 @@ iframe{width:100%;height:100%;border:0;}
 (() => {
   'use strict';
   const predefinedUrls = [
-"https://theporndude.com/zh","https://www.ixxx.com/zh/","https://rule34.xxx/","https://www.xnxx.com/","https://fikfap.com/","https://netflav.com/","https://tubesafari.com/","https://www.fuq.com/zh/","https://www.alohatube.com/","https://fuckmoral.com/zh","https://spankbang.com/","https://www.porngo.com/","https://www.youporn.com/","https://pornone.com/","https://avtoday.io/index","http://www.h528.com/","https://asmrpleasure.com/","https://www.redgifs.com/","https://m.hqporner.com/","https://www.naughtymachinima.com/","https://kemono.su/","https://motherless.com/","https://fullporner.com/","https://www.trendyporn.com/","https://letsjerk.tv/","https://pornobae.com/","https://pornmz.com/","https://www9.pornhd3x.tv/","https://joysporn.club/","https://xxxfree.watch/","https://foxnxx.com/","https://latestpornvideo.com/","https://anyporn.com/","https://kwiky.com/","https://www.xxxfollow.com/","https://ogfap.com/","https://www.avrebo.com/zh-CN","https://reelsmunkey.com/","https://xxtok.com/x/uxtsdwc6","https://www.extranaughty.com/home","https://javtrailers.com/shorts/live","https://www.heavy-r.com/","https://bdsmstreak.com/","https://l.clips4sale.com/search","https://hypnoporn.net/","https://hcbdsm.com/","https://cosxplay.com/","https://69story.com/","https://hhhbook.com/","https://aaanovel.com/","https://xx-book.com/","https://xbookcn.net/","https://www.caramelbbw.com/en/","https://www.naughtyblog.org/","https://bigboobsfilm.com/en/","https://titshits.com/en/","https://spicybigtits.com/en/","https://www.curvyerotic.com/","https://www.teensnow.com/","https://www.assoass.com/zh/","https://www.trannytube.tv/","https://www.shemaletubevideos.com/","https://spicytranny.com/en/",
+"https://lilithkate202.github.io/random-porn-text.github.io/",
+"https://theporndude.com/zh","https://www.ixxx.com/zh/","https://rule34.xxx/","https://fikfap.com/","https://netflav.com/","https://tubesafari.com/","https://www.alohatube.com/","https://fuckmoral.com/zh","https://spankbang.com/","https://www.porngo.com/","https://www.youporn.com/","https://pornone.com/","https://avtoday.io/index","http://www.h528.com/","https://asmrpleasure.com/","https://www.redgifs.com/","https://m.hqporner.com/","https://www.naughtymachinima.com/","https://kemono.su/","https://motherless.com/","https://fullporner.com/","https://www.trendyporn.com/","https://letsjerk.tv/","https://pornobae.com/","https://pornmz.com/","https://www9.pornhd3x.tv/","https://joysporn.club/","https://xxxfree.watch/","https://foxnxx.com/","https://latestpornvideo.com/","https://anyporn.com/","https://kwiky.com/","https://www.xxxfollow.com/","https://ogfap.com/","https://www.avrebo.com/zh-CN","https://reelsmunkey.com/","https://xxtok.com/x/uxtsdwc6","https://www.extranaughty.com/home","https://javtrailers.com/shorts/live","https://www.heavy-r.com/","https://bdsmstreak.com/","https://l.clips4sale.com/search","https://hypnoporn.net/","https://hcbdsm.com/","https://cosxplay.com/","https://69story.com/","https://hhhbook.com/","https://aaanovel.com/","https://xx-book.com/","https://xbookcn.net/","https://www.caramelbbw.com/en/","https://www.naughtyblog.org/","https://bigboobsfilm.com/en/","https://titshits.com/en/","https://spicybigtits.com/en/","https://www.curvyerotic.com/","https://www.teensnow.com/","https://www.assoass.com/zh/","https://www.trannytube.tv/","https://www.shemaletubevideos.com/","https://spicytranny.com/en/",
 "https://transfap.to/","https://transdoe.com/","https://iamsissy.com/","https://www.incestflix.com/","https://milfnut.com/","https://www.incestvidz.com/","https://familypornhd.com/","https://milfcaps.com/home/","https://familyporner.com/","https://www.3dsexanime.xyz/","https://xanimu.com/","https://myhentaigallery.com/","https://myhentaicomics.com/","https://svscomics.com/","https://freeadultcomix.com/","https://bestporncomix.com/","https://www.erofus.com/","https://gedecomix.com/main/","https://www.palcomix.com/supportpal.html","https://www.wnacg.com/","https://www.177picyy.com/","https://www.ho5ho.com/","https://rokuhentai.com/","https://www.comicbox.xyz/index.html","https://syacomic.com/","https://hentaifox.com/","https://www.simply-hentai.com/web1","https://9hentai.so/#6g","https://hentairox.com/","https://asmhentai.com/","https://hentaihere.com/","https://ns0.com/"
 ];
-  const imageApiUrls = ['https://moe.jitsu.top/img/?sort=r18',];
+  const imageApiUrls = ['https://moe.jitsu.top/img/?sort=r18','https://moe.jitsu.top/img/'
+];
   const randomTexts = [
 "操你妈","低贱","舔逼","狗篮子","3cm小鸡巴","骚舌头","无能死精","短鸡巴","肉穴夹爆","撸爆浆",
 
@@ -412,7 +429,7 @@ box.style.top  = Math.max(0, Math.min(Math.random() * (innerHeight - boxH), inne
     if(document.querySelector('.bounce-container')) return;
     const box=document.createElement('div');box.className='element bounce-container';
     box.style.left=`${Math.max(0,Math.random()*(innerWidth-75))}px`;box.style.top=`${Math.max(0,Math.random()*(innerHeight-50))}px`;
-    const title=document.createElement('div');title.textContent='撸出精液';title.className='bounce-title';
+    const title=document.createElement('div');title.textContent='根据节奏';title.className='bounce-title';
     const cvs=document.createElement('canvas');cvs.className='bounce-canvas';cvs.width=75;cvs.height=35;
     box.appendChild(title);box.appendChild(cvs);document.body.appendChild(box);if(isMoving) move(box);
     const ctx=cvs.getContext('2d');const r=6;let y=r,vy=1.7;
@@ -727,12 +744,83 @@ box.style.top  = Math.max(0, Math.min(Math.random() * (innerHeight - boxH), inne
 })();
 
 
+(() => {
+  /* 1. 关闭按钮样式 */
+  const css = document.createElement('style');
+  css.textContent = `
+    .iframe-close {
+      position:absolute; top:2px; right:2px;
+      width:20px; height:20px; line-height:18px;
+      text-align:center; background:#ff4d4f; color:#fff;
+      font-size:14px; border-radius:50%; cursor:pointer;
+      z-index:10; user-select:none;
+    }
+  `;
+  document.head.appendChild(css);
+
+  /* 2. 给 iframe 容器插入按钮并挂事件 */
+  const addCloseBtn = box => {
+    if (box.querySelector('.iframe-close')) return; // 已存在则跳过
+    const btn = document.createElement('div');
+    btn.className = 'iframe-close';
+    btn.innerHTML = '&times;';
+    btn.onclick = () => box.remove();
+    box.style.position = 'relative'; // 确保按钮绝对定位生效
+    box.appendChild(btn);
+  };
+
+  /* 3. 监听动态新增 iframe */
+  const mo = new MutationObserver(list => {
+    list.forEach(rec => rec.addedNodes.forEach(n => {
+      if (n.nodeType === 1 && n.classList.contains('iframe-container')) {
+        addCloseBtn(n);
+      }
+    }));
+  });
+  莫.观察(文档.身体, { 儿童列表: 真实的, 子树: 真实的 });
+
+  /* 4。页面已存在的 iframe 也补按钮 */
+  文档.查询选择器全部('.iframe-容器').对于每个(添加关闭Btn);
+})();
+
+
+(() => {
+  /* 通用加减金币函数 */
+  常数 添加币 = 三角洲 => {
+    常数 新瓦尔 = 数学.最大(0, 硬币 + 三角洲);
+    如果 (新瓦尔 ！== 硬币) {
+      硬币 = 新瓦尔;
+      硬币谷.文本内容 = 硬币.已修复(1);
+      返回 真实的;
+    }
+    如果 (三角洲 < 0) 警报('金币不足！当前只有' + 硬币.已修复(1) + ' 毫升');
+    返回 错误的;
+  };
+
+  /* 挂事件:新增窗口 +1 毫升 */
+  常数 rawCreateIframe = 窗户.创建Iframe;
+  窗户.创建Iframe = 功能 () {
+    如果 (添加币(1)) rawCreateIframe?.();
+  };
+
+  /* 挂事件:删除窗口 -0。5 毫升 */
+  常数 delBtn = 文档.获取元素ById('delWindowBtn');
+  如果 (delBtn) {
+    delBtn.添加事件监听器(“点击”, () => {
+      常数 iframe = 文档.查询选择器全部('.iframe-容器');
+      如果 (iframe.长度 && 添加币(-1)) {
+        iframe[数学.地板(数学.随机的() * iframe.长度)].删除();
+        统计数据.iframe已关闭++；
+      }
+    });
+  }
+})();
+
 
 
 
 
 })();
-</script>
-</body>
+</脚本>
+</身体>
 </html>
-
