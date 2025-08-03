@@ -825,47 +825,13 @@ box.style.top  = Math.max(0, Math.min(Math.random() * (innerHeight - boxH), inne
   }
 })();
 
-	(() => {
-  /* 等待矩形框渲染完成 */
-  const addCopyBtn = () => {
-    const box = document.getElementById('lottoBox');
-    if (!box || box.querySelector('#copyBtn')) return;
 
-    const btn = document.createElement('button');
-    btn.id = 'copyBtn';
-    btn.textContent = '复制';
-    btn.style.cssText = 
-      margin-left:10px;padding:2px 8px;
-      background:#007bff;color:#fff;border:none;border-radius:4px;cursor:pointer;
-    ;
-    btn.onclick = () => {
-      const url = document.getElementById('lottoLink').href;
-      /* 原生复制方案，IE9+、Chrome、Firefox、Safari 全支持 [^157^] */
-      const dummy = document.createElement('input');
-      dummy.value = url;
-      document.body.appendChild(dummy);
-      dummy.select();
-      document.execCommand('copy');
-      document.body.removeChild(dummy);
-      alert('网址已复制！');
-    };
-    box.appendChild(btn);
-  };
-
-  /* 每次抽奖后自动追加复制按钮 */
-  const rawShow = () => addCopyBtn();
-  const observer = new MutationObserver(() => {
-    if (document.getElementById('lottoBox')?.style.display === 'flex') {
-      addCopyBtn();
-    }
-  });
-  observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] });
-})();
 
 })();
 </script>
 </body>
 </html>
+
 
 
 
